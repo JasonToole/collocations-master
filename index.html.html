@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Context & Collocation Master</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: linear-gradient(135deg, #1e3a8a, #7c3aed);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    color: #1f2937;
+  }
+  .app {
+    background: #fff;
+    border-radius: 20px;
+    padding: 28px;
+    max-width: 560px;
+    width: 100%;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  }
+  .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+  .title { font-size: 18px; font-weight: 700; color: #4c1d95; }
+  .stats { display: flex; gap: 12px; font-size: 13px; font-weight: 600; }
+  .stat { background: #f3f4f6; padding: 6px 12px; border-radius: 8px; }
+  .stat.correct { background: #d1fae5; color: #065f46; }
+  .stat.wrong { background: #fee2e2; color: #991b1b; }
+
+  .progress-bar { height: 6px; background: #e5e7eb; border-radius: 3px; margin-bottom: 24px; overflow: hidden; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, #7c3aed, #ec4899); transition: width 0.4s; }
+
+  .level-badge {
+    display: inline-block;
+    background: #ede9fe;
+    color: #5b21b6;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    margin-bottom: 12px;
+  }
+
+  .question { font-size: 20px; line-height: 1.5; margin-bottom: 20px; font-weight: 500; }
+  .blank {
+    display: inline-block;
+    min-width: 90px;
+    border-bottom: 3px solid #7c3aed;
+    color: #7c3aed;
+    font-weight: 700;
+    text-align: center;
+  }
+
+  .options { display: flex; flex-direction: column; gap: 10px; }
+  .option {
+    padding: 14px 18px;
+    border: 2px solid #e5e7eb;
+    border-radius: 12px;
+    background: #fff;
+    font-size: 15px;
+    font-weight: 500;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+  }
+  .option:hover:not(:disabled) { border-color: #7c3aed; background: #faf5ff; transform: translateX(4px); }
+  .option.correct { background: #d1fae5; border-color: #10b981; color: #065f46; }
+  .option.wrong { background: #fee2e2; border-color: #ef4444; color: #991b1b; }
+  .option:disabled { cursor: not-allowed; }
+
+  .feedback {
+    margin-top: 16px;
+    padding: 14px;
+    border-radius: 10px;
+    font-size: 14px;
+    line-height: 1.5;
+    display: none;
+  }
+  .feedback.show { display: block; }
+  .feedback.correct { background: #ecfdf5; border-left: 4px solid #10b981; }
+  .feedback.wrong { background: #fef2f2; border-left: 4px solid #ef4444; }
+
+  .next-btn {
+    margin-top: 16px;
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(135deg, #7c3aed, #ec4899);
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    display: none;
+    font-family: inherit;
+  }
+  .next-btn.show { display: block; }
+
+  .end-screen { text-align: center; padding: 20px 0; }
+  .end-screen h2 { color: #4c1d95; font-size: 26px; margin-bottom: 12px; }
+  .end-screen .score { font-size: 48px; font-weight: 800; color: #7c3aed; margin: 16px 0; }
+
+  .restart {
+    margin-top: 20px;
+    padding: 14px 32px;
+    background: linear-gradient(135deg, #7c3aed, #ec4899);
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+  }
+
+  /* Start screen */
+  .start-screen { text-align: center; padding: 12px 0; }
+  .start-screen h1 { color: #4c1d95; font-size: 24px; margin-bottom: 8px; }
+  .start-screen p { color: #6b7280; font-size: 14px; margin-bottom: 24px; }
+  .level-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .level-btn {
+    padding: 16px 12px;
+    border: 2px solid #e5e7eb;
+    border-radius: 12px;
+    background: #fff;
+    cursor: pointer;
+    font-family: inherit;
+    text-align: left;
+    transition: all 0.2s;
+  }
+  .level-btn:hover { border-color: #7c3aed; background: #faf5ff; transform: translateY(-2px); }
+  .level-btn .lvl { font-size: 18px; font-weight: 800; color: #7c3aed; display: block; }
+  .level-btn .desc { font-size: 12px; color: #6b7280; margin-top: 2px; display: block; }
+  .level-btn .count { font-size: 11px; color: #9ca3af; margin-top: 4px; display: block; }
+
+  .session-note {
+    font-size: 12px;
+    color: #9ca3af;
+    margin-top: 12px;
+    padding-top: 16px;
+    border-top: 1px solid #f3f4f6;
+  }
+
+  /* Review section */
+  .review-section {
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 2px solid #f3f4f6;
+    text-align: left;
+    max-height: 320px;
+    overflow-y: auto;
+  }
+  .review-section h3 {
+    font-size: 15px;
+    color: #991b1b;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .review-item {
+    background: #fef2f2;
+    border-left: 3px solid #ef4444;
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-bottom: 10px;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .review-item .review-sentence { color: #374151; margin-bottom: 4px; }
+  .review-item .review-answer { color: #065f46; font-weight: 600; margin-bottom: 4px; }
+  .review-item .review-explain { color: #6b7280; font-size: 12px; }
+
+  .action-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .action-row .restart { margin-top: 0; }
+  .secondary-btn {
+    padding: 14px 24px;
+    background: #fff;
+    color: #7c3aed;
+    border: 2px solid #7c3aed;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .secondary-btn:hover { background: #faf5ff; }
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+
+<script>
+// ========== QUESTION DATA (55 questions) ==========
+const QUESTIONS = [
+  // A2: DO vs MAKE
+  { level: "A2", sentence: "She needs to ___ a decision about her career.", options: ["do", "make", "take", "get"], correct: 1, explanation: "'Make a decision' is the standard collocation. 'Do' is used for tasks (do homework), 'take' for actions (take a break)." },
+  { level: "A2", sentence: "I have to ___ the shopping this afternoon.", options: ["make", "do", "take", "have"], correct: 1, explanation: "'Do the shopping' is correct. 'Make' is for creating things (make a cake)." },
+  { level: "A2", sentence: "I need to ___ my homework before dinner.", options: ["make", "do", "take", "have"], correct: 1, explanation: "'Do homework' is correct. 'Make homework' is a classic learner error." },
+  { level: "A2", sentence: "Can you ___ me a favour?", options: ["make", "do", "give", "take"], correct: 1, explanation: "'Do a favour' is the collocation. 'Make a favour' is incorrect." },
+  { level: "A2", sentence: "She ___ a cake for her son's birthday.", options: ["did", "made", "took", "had"], correct: 1, explanation: "'Make a cake' is correct—you create something. 'Do a cake' is wrong." },
+  { level: "A2", sentence: "He always ___ his best in every match.", options: ["makes", "does", "takes", "gives"], correct: 1, explanation: "'Do your best' is a fixed expression. 'Make your best' is incorrect." },
+  { level: "A2", sentence: "Let's ___ a break for ten minutes.", options: ["do", "make", "take", "have"], correct: 2, explanation: "'Take a break' is correct. 'Do a break' and 'make a break' are errors. ('Have a break' is also acceptable in British English, but 'take' is more standard here.)" },
+  { level: "A2", sentence: "I need to ___ a phone call to my mother.", options: ["do", "make", "take", "give"], correct: 1, explanation: "'Make a phone call' is standard. 'Do a phone call' is a common learner error." },
+  { level: "A2", sentence: "Please ___ your bed before you leave.", options: ["do", "make", "take", "clean"], correct: 1, explanation: "'Make your bed' is the collocation. 'Do your bed' is incorrect." },
+  { level: "A2", sentence: "She ___ the dishes after dinner every night.", options: ["makes", "does", "takes", "gets"], correct: 1, explanation: "'Do the dishes' is correct. 'Make the dishes' means to create them, which is different." },
+
+  // A2–B1: HAVE / TAKE / GET / GIVE
+  { level: "A2", sentence: "He ___ an accident on his way to work.", options: ["made", "did", "had", "took"], correct: 2, explanation: "'Have an accident' is the correct collocation. 'Make' and 'do' do not collocate with 'accident.'" },
+  { level: "A2", sentence: "Let's ___ a shower before we go out.", options: ["make", "do", "take", "give"], correct: 2, explanation: "'Take a shower' is standard in American English. ('Have a shower' is common in British English.)" },
+  { level: "A2", sentence: "I ___ a headache this morning.", options: ["make", "do", "have", "take"], correct: 2, explanation: "'Have a headache' is correct—you don't 'make' or 'take' one." },
+  { level: "B1", sentence: "You should ___ attention to the teacher.", options: ["give", "pay", "make", "take"], correct: 1, explanation: "'Pay attention' is a fixed collocation. 'Give attention' is rare and 'make attention' is incorrect." },
+  { level: "B1", sentence: "Can you ___ me a hand with these boxes?", options: ["give", "make", "do", "take"], correct: 0, explanation: "'Give someone a hand' means to help. 'Make a hand' and 'do a hand' are incorrect." },
+  { level: "B1", sentence: "She ___ a lot of progress in her English this year.", options: ["did", "made", "took", "had"], correct: 1, explanation: "'Make progress' is the standard collocation. 'Do progress' is a common learner error." },
+  { level: "B1", sentence: "I need to ___ some exercise—I've been lazy lately.", options: ["make", "do", "take", "have"], correct: 1, explanation: "'Do exercise' is correct. 'Make exercise' is incorrect." },
+  { level: "B1", sentence: "The doctor told him to ___ his medicine twice a day.", options: ["make", "do", "take", "have"], correct: 2, explanation: "'Take medicine' is the standard collocation. 'Do medicine' and 'make medicine' are incorrect." },
+  { level: "B1", sentence: "She ___ a lovely compliment about my dress.", options: ["made", "did", "paid", "gave"], correct: 3, explanation: "'Give a compliment' is most natural. 'Pay a compliment' is also correct but more formal. 'Make a compliment' is a common error." },
+  { level: "B1", sentence: "We need to ___ a plan for the weekend.", options: ["do", "make", "take", "have"], correct: 1, explanation: "'Make a plan' is correct. 'Do a plan' is a classic learner error." },
+
+  // B1: BUSINESS / ACADEMIC
+  { level: "B1", sentence: "The company wants to ___ a profit this year.", options: ["do", "make", "take", "get"], correct: 1, explanation: "'Make a profit' is standard business English. 'Do a profit' is a common learner error." },
+  { level: "B1", sentence: "We need to ___ a meeting to discuss the project.", options: ["do", "make", "have", "take"], correct: 2, explanation: "'Have a meeting' is most natural. 'Make a meeting' and 'do a meeting' are incorrect." },
+  { level: "B1", sentence: "She ___ a presentation to the board yesterday.", options: ["did", "made", "gave", "took"], correct: 2, explanation: "'Give a presentation' is standard. 'Make a presentation' is also used but 'give' is more common." },
+  { level: "B1", sentence: "The manager ___ a decision to hire more staff.", options: ["did", "took", "made", "had"], correct: 2, explanation: "'Make a decision' is the fixed collocation. 'Take a decision' is used in British English but 'make' is more universal." },
+  { level: "B1", sentence: "We must ___ a solution to this problem soon.", options: ["find", "make", "do", "take"], correct: 0, explanation: "'Find a solution' is the most natural collocation. 'Make a solution' sounds unnatural." },
+  { level: "B1", sentence: "He ___ a lot of money in the stock market.", options: ["did", "made", "took", "got"], correct: 1, explanation: "'Make money' is correct. 'Do money' and 'take money' are incorrect." },
+  { level: "B1", sentence: "Can you ___ a note of the meeting time?", options: ["do", "make", "take", "have"], correct: 1, explanation: "'Make a note' is correct. 'Take a note' is possible but 'make a note' is more standard." },
+  { level: "B1", sentence: "The team ___ a great effort to finish on time.", options: ["did", "made", "took", "had"], correct: 1, explanation: "'Make an effort' is the fixed collocation. 'Do an effort' is a common learner error." },
+  { level: "B1", sentence: "She ___ a speech at the conference.", options: ["did", "made", "gave", "took"], correct: 2, explanation: "'Give a speech' is standard. 'Make a speech' is also correct in some contexts, but 'give' is more common." },
+  { level: "B1", sentence: "We need to ___ a choice between the two options.", options: ["do", "make", "take", "have"], correct: 1, explanation: "'Make a choice' is the correct collocation. 'Do a choice' is incorrect." },
+
+  // B1–B2: PREPOSITIONS
+  { level: "B1", sentence: "It depends ___ the weather.", options: ["of", "on", "in", "at"], correct: 1, explanation: "'Depend on' is the fixed preposition. 'Depend of' is a very common learner error." },
+  { level: "B1", sentence: "I'm not good ___ maths.", options: ["in", "at", "on", "for"], correct: 1, explanation: "'Good at' is the correct preposition. 'Good in' is sometimes used but 'good at' is standard." },
+  { level: "B1", sentence: "She's interested ___ learning Japanese.", options: ["on", "in", "at", "for"], correct: 1, explanation: "'Interested in' is the fixed collocation. 'Interested on' is incorrect." },
+  { level: "B1", sentence: "He's afraid ___ spiders.", options: ["from", "of", "for", "with"], correct: 1, explanation: "'Afraid of' is the correct preposition. 'Afraid from' is a common learner error." },
+  { level: "B1", sentence: "We arrived ___ the airport at 6am.", options: ["to", "at", "in", "on"], correct: 1, explanation: "'Arrive at' is used for specific places (airport, station). 'Arrive in' is for cities/countries." },
+  { level: "B1", sentence: "She's married ___ a doctor.", options: ["with", "to", "for", "at"], correct: 1, explanation: "'Married to' is the correct preposition. 'Married with' is a common error." },
+  { level: "B1", sentence: "I'm looking forward ___ seeing you.", options: ["for", "to", "at", "on"], correct: 1, explanation: "'Look forward to' is the fixed phrase. 'Look forward for' is incorrect." },
+  { level: "B1", sentence: "He apologised ___ being late.", options: ["of", "for", "about", "on"], correct: 1, explanation: "'Apologise for' is the correct preposition. 'Apologise about' is sometimes used but 'for' is standard." },
+  { level: "B1", sentence: "She's very proud ___ her son.", options: ["of", "for", "on", "at"], correct: 0, explanation: "'Proud of' is the fixed collocation. 'Proud for' is a common learner error." },
+  { level: "B1", sentence: "We need to focus ___ the main problem.", options: ["in", "on", "at", "for"], correct: 1, explanation: "'Focus on' is the correct preposition. 'Focus in' is sometimes used but 'on' is standard." },
+
+  // B2: ADVANCED / FORMAL
+  { level: "B2", sentence: "The new policy will ___ a significant impact on small businesses.", options: ["make", "do", "have", "take"], correct: 2, explanation: "'Have an impact' is standard. 'Make an impact' is also used but 'have' is more formal and common in written English." },
+  { level: "B2", sentence: "She ___ a strong argument for the proposal.", options: ["made", "did", "took", "gave"], correct: 0, explanation: "'Make an argument' is correct. 'Give an argument' is possible but less common in this context." },
+  { level: "B2", sentence: "He ___ a crucial role in the project's success.", options: ["made", "did", "played", "took"], correct: 2, explanation: "'Play a role' is the correct collocation. 'Make a role' and 'do a role' are incorrect." },
+  { level: "B2", sentence: "The government must ___ the issue of climate change.", options: ["address", "make", "do", "take"], correct: 0, explanation: "'Address an issue' is formal and precise. 'Make an issue' means to create a problem, which changes the meaning." },
+  { level: "B2", sentence: "The two countries ___ a peace agreement last year.", options: ["did", "made", "signed", "took"], correct: 2, explanation: "'Sign an agreement' is the precise collocation. 'Make an agreement' is possible but 'sign' is more specific." },
+  { level: "B2", sentence: "She ___ a great deal of influence over the committee.", options: ["has", "makes", "does", "takes"], correct: 0, explanation: "'Have influence' is the correct collocation. 'Make influence' and 'do influence' are incorrect." },
+  { level: "B2", sentence: "We need to ___ a balance between work and life.", options: ["find", "make", "do", "take"], correct: 0, explanation: "'Find a balance' is the natural collocation. 'Make a balance' sounds unnatural." },
+  { level: "B2", sentence: "The company ___ a significant contribution to the local economy.", options: ["did", "made", "took", "gave"], correct: 1, explanation: "'Make a contribution' is the standard collocation. 'Do a contribution' is incorrect." },
+  { level: "B2", sentence: "He ___ a strong impression on the interviewers.", options: ["did", "made", "took", "gave"], correct: 1, explanation: "'Make an impression' is the fixed collocation. 'Do an impression' means to imitate someone, which is different." },
+  { level: "B2", sentence: "The report ___ light on the causes of the crisis.", options: ["shed", "made", "did", "took"], correct: 0, explanation: "'Shed light on' is a formal idiom meaning to clarify. The other options don't form this collocation." },
+  { level: "B2", sentence: "She ___ a compelling case for reform.", options: ["made", "did", "took", "gave"], correct: 0, explanation: "'Make a case for' is the standard collocation. 'Give a case' is incorrect." },
+  { level: "B2", sentence: "We must ___ the necessary precautions before the storm.", options: ["do", "make", "take", "have"], correct: 2, explanation: "'Take precautions' is the fixed collocation. 'Make precautions' and 'do precautions' are incorrect." },
+  { level: "B2", sentence: "The CEO ___ full responsibility for the mistake.", options: ["made", "did", "took", "had"], correct: 2, explanation: "'Take responsibility' is the standard collocation. 'Make responsibility' is incorrect." },
+  { level: "B2", sentence: "Her research ___ new light on the disease.", options: ["shed", "made", "did", "gave"], correct: 0, explanation: "'Shed light on' is a fixed formal expression. The other options don't collocate with 'light' in this sense." },
+  { level: "B2", sentence: "The committee will ___ a final decision tomorrow.", options: ["do", "make", "take", "have"], correct: 1, explanation: "'Make a decision' is the standard collocation. 'Take a decision' is British English but 'make' is more universal." }
+];
+
+// ========== CONFIG ==========
+const SESSION_LENGTH = 15;
+
+// ========== STATE ==========
+let state = {
+  current: 0,
+  score: 0,
+  correct: 0,
+  wrong: 0,
+  answered: false,
+  order: [],
+  wrongAnswers: [],
+  level: 'all'
+};
+
+// ========== HELPERS ==========
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function filterByLevel(level) {
+  if (level === 'all') return QUESTIONS;
+  return QUESTIONS.filter(q => q.level === level);
+}
+
+function getLevelCounts() {
+  const counts = { all: QUESTIONS.length, A2: 0, B1: 0, B2: 0 };
+  QUESTIONS.forEach(q => { counts[q.level] = (counts[q.level] || 0) + 1; });
+  return counts;
+}
+
+// ========== SCREENS ==========
+function renderStartScreen() {
+  const counts = getLevelCounts();
+  document.getElementById('app').innerHTML = `
+    <div class="start-screen">
+      <h1>Context & Collocation Master</h1>
+      <p>Master how Oxford 3000 words work together—not just what they mean.</p>
+      <div class="level-grid">
+        <button class="level-btn" data-level="all">
+          <span class="lvl">All Levels</span>
+          <span class="desc">Mixed difficulty</span>
+          <span class="count">${counts.all} questions</span>
+        </button>
+        <button class="level-btn" data-level="A2">
+          <span class="lvl">A2</span>
+          <span class="desc">Elementary</span>
+          <span class="count">${counts.A2} questions</span>
+        </button>
+        <button class="level-btn" data-level="B1">
+          <span class="lvl">B1</span>
+          <span class="desc">Intermediate</span>
+          <span class="count">${counts.B1} questions</span>
+        </button>
+        <button class="level-btn" data-level="B2">
+          <span class="lvl">B2</span>
+          <span class="desc">Upper Intermediate</span>
+          <span class="count">${counts.B2} questions</span>
+        </button>
+      </div>
+      <div class="session-note">
+        Each session has ${SESSION_LENGTH} questions, randomly selected.
+      </div>
+    </div>
+  `;
+
+  document.querySelectorAll('.level-btn').forEach(btn => {
+    btn.addEventListener('click', () => startGame(btn.dataset.level));
+  });
+}
+
+function startGame(level = 'all') {
+  const pool = filterByLevel(level);
+  const sessionQuestions = shuffle(pool).slice(0, Math.min(SESSION_LENGTH, pool.length));
+  state = {
+    current: 0,
+    score: 0,
+    correct: 0,
+    wrong: 0,
+    answered: false,
+    order: sessionQuestions,
+    wrongAnswers: [],
+    level: level
+  };
+  render();
+}
+
+function render() {
+  const app = document.getElementById('app');
+
+  if (state.current >= state.order.length) {
+    renderEnd(app);
+    return;
+  }
+
+  const q = state.order[state.current];
+  const progress = (state.current / state.order.length) * 100;
+
+  app.innerHTML = `
+    <div class="header">
+      <div class="title">Collocation Master</div>
+      <div class="stats">
+        <div class="stat correct">✓ ${state.correct}</div>
+        <div class="stat wrong">✗ ${state.wrong}</div>
+      </div>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" style="width:${progress}%"></div></div>
+    <div class="level-badge">CEFR ${q.level} · Q${state.current + 1}/${state.order.length}</div>
+    <div class="question">${q.sentence.replace('___', '<span class="blank">?</span>')}</div>
+    <div class="options" id="options">
+      ${q.options.map((opt, i) => `<button class="option" data-index="${i}">${opt}</button>`).join('')}
+    </div>
+    <div class="feedback" id="feedback"></div>
+    <button class="next-btn" id="nextBtn">Next Question →</button>
+  `;
+
+  document.querySelectorAll('.option').forEach(btn => {
+    btn.addEventListener('click', () => handleAnswer(parseInt(btn.dataset.index)));
+  });
+  document.getElementById('nextBtn').addEventListener('click', nextQuestion);
+}
+
+function handleAnswer(selected) {
+  if (state.answered) return;
+  state.answered = true;
+
+  const q = state.order[state.current];
+  const buttons = document.querySelectorAll('.option');
+  const feedback = document.getElementById('feedback');
+  const isCorrect = selected === q.correct;
+
+  buttons.forEach((btn, i) => {
+    btn.disabled = true;
+    if (i === q.correct) btn.classList.add('correct');
+    if (i === selected && !isCorrect) btn.classList.add('wrong');
+  });
+
+  if (isCorrect) {
+    state.correct++;
+    state.score += 10;
+    feedback.className = 'feedback correct show';
+    feedback.innerHTML = `<strong>✓ Correct!</strong><br>${q.explanation}`;
+  } else {
+    state.wrong++;
+    state.wrongAnswers.push(q);
+    feedback.className = 'feedback wrong show';
+    feedback.innerHTML = `<strong>✗ Not quite.</strong> The answer is "<strong>${q.options[q.correct]}</strong>".<br>${q.explanation}`;
+  }
+
+  document.getElementById('nextBtn').classList.add('show');
+}
+
+function nextQuestion() {
+  state.current++;
+  state.answered = false;
+  render();
+}
+
+function renderEnd(app) {
+  const total = state.order.length;
+  const pct = Math.round((state.correct / total) * 100);
+  let message = pct >= 80 ? "Outstanding! 🎉" : pct >= 60 ? "Good work! 👍" : "Keep practicing! 💪";
+
+  let reviewHTML = '';
+  if (state.wrongAnswers.length > 0) {
+    reviewHTML = `
+      <div class="review-section">
+        <h3>⚠ Review These (${state.wrongAnswers.length})</h3>
+        ${state.wrongAnswers.map(q => `
+          <div class="review-item">
+            <div class="review-sentence">${q.sentence.replace('___', `<strong>${q.options[q.correct]}</strong>`)}</div>
+            <div class="review-answer">✓ ${q.options[q.correct]} (${q.level})</div>
+            <div class="review-explain">${q.explanation}</div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+
+  app.innerHTML = `
+    <div class="end-screen">
+      <h2>${message}</h2>
+      <div class="score">${state.correct}/${total}</div>
+      <p style="color:#6b7280;font-size:15px;">You scored ${state.score} points (${pct}%)</p>
+      ${reviewHTML}
+      <div class="action-row">
+        <button class="secondary-btn" onclick="renderStartScreen()">Change Level</button>
+        <button class="restart" onclick="startGame('${state.level}')">Play Again</button>
+      </div>
+    </div>
+  `;
+}
+
+// ========== BOOT ==========
+renderStartScreen();
+</script>
+</body>
+</html>
